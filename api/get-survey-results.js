@@ -14,8 +14,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || '$2a$10$cKfRZqFvkMmWoL6GYE0CL.VXI7JOM1i6hR45XBhH5fEjw6JjPWATC'; // เปลี่ยนตรงนี้
-    const BIN_ID = process.env.JSONBIN_BIN_ID || '6948332743b1c97be9fd22d7'; // เปลี่ยนตรงนี้
+    const JSONBIN_API_KEY = '$2a$10$VGZjLDJQe1/WSm7qkgtQLOomSVydqa87D1PuaRB6A7Atja/cjBEHm'; // เปลี่ยนตรงนี้
+    const BIN_ID = '6948332743b1c97be9fd22d7'; // เปลี่ยนตรงนี้
 
     // ดึงข้อมูลจาก JSONBin
     const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {

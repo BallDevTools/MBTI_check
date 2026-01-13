@@ -31,10 +31,10 @@ module.exports = async (req, res) => {
     }
 
     // ตั้งค่า JSONBin
-    const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || '$2a$10$cKfRZqFvkMmWoL6GYE0CL.VXI7JOM1i6hR45XBhH5fEjw6JjPWATC'; // เปลี่ยนตรงนี้
-    const BIN_ID = process.env.JSONBIN_BIN_ID || '6948332743b1c97be9fd22d7'; // เปลี่ยนตรงนี้
+    const JSONBIN_API_KEY = '$2a$10$VGZjLDJQe1/WSm7qkgtQLOomSVydqa87D1PuaRB6A7Atja/cjBEHm'; // เปลี่ยนตรงนี้
+    const BIN_ID =  '6948332743b1c97be9fd22d7'; // เปลี่ยนตรงนี้
 
-    if (!JSONBIN_API_KEY || JSONBIN_API_KEY === '$2a$10$cKfRZqFvkMmWoL6GYE0CL.VXI7JOM1i6hR45XBhH5fEjw6JjPWATC') {
+    if (!JSONBIN_API_KEY || JSONBIN_API_KEY === '$2a$10$VGZjLDJQe1/WSm7qkgtQLOomSVydqa87D1PuaRB6A7Atja/cjBEHm') {
       return res.status(500).json({ 
         success: false, 
         message: 'ไม่พบ JSONBIN_API_KEY กรุณาตั้งค่าใน Vercel Environment Variables' 
