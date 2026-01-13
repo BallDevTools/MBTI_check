@@ -1,0 +1,16 @@
+{
+  "routes": [
+    {
+      "src": "/api/submit-personality",
+      "dest": "/api/submit-personality.js"
+    },
+    {
+      "src": "/api/get-personality-results",
+      "dest": "/api/get-personality-results.js"
+    },
+    {
+      "src": "/api/export-csv",
+      "dest": "/api/export-csv.js"
+    }
+  ]
+}
