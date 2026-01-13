@@ -30,36 +30,33 @@ module.exports = async (req, res) => {
       });
     }
 
-    const GITHUB_TOKEN = "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";
-    const REPO_OWNER = process.env.REPO_OWNER || 'BallDevTools'; // เปลี่ยนตรงนี้
-    const REPO_NAME = process.env.REPO_NAME || 'MBTI_check'; // เปลี่ยนตรงนี้
-    const FILE_PATH = 'data/personality-responses.json';
+    // ตั้งค่า JSONBin
+    const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || '$2a$10$cKfRZqFvkMmWoL6GYE0CL.VXI7JOM1i6hR45XBhH5fEjw6JjPWATC'; // เปลี่ยนตรงนี้
+    const BIN_ID = process.env.JSONBIN_BIN_ID || '6948332743b1c97be9fd22d7'; // เปลี่ยนตรงนี้
 
-    // Get current file
-    const getFileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-    
-    let currentData = { responses: [], totalResponses: 0 };
-    let fileSha = null;
-
-    try {
-      const getResponse = await fetch(getFileUrl, {
-        headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
+    if (!JSONBIN_API_KEY || JSONBIN_API_KEY === '$2a$10$cKfRZqFvkMmWoL6GYE0CL.VXI7JOM1i6hR45XBhH5fEjw6JjPWATC') {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'ไม่พบ JSONBIN_API_KEY กรุณาตั้งค่าใน Vercel Environment Variables' 
       });
-
-      if (getResponse.ok) {
-        const fileData = await getResponse.json();
-        fileSha = fileData.sha;
-        const content = Buffer.from(fileData.content, 'base64').toString('utf8');
-        currentData = JSON.parse(content);
-      }
-    } catch (error) {
-      console.log('File not found, will create new one');
     }
 
-    // Add new response
+    // ดึงข้อมูลปัจจุบันจาก JSONBin
+    const getResponse = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': JSONBIN_API_KEY
+      }
+    });
+
+    if (!getResponse.ok) {
+      throw new Error('ไม่สามารถดึงข้อมูลจาก JSONBin ได้');
+    }
+
+    const binData = await getResponse.json();
+    const currentData = binData.record || { responses: [], totalResponses: 0 };
+
+    // เพิ่มข้อมูลใหม่
     const newResponse = {
       id: currentData.totalResponses + 1,
       timestamp: new Date().toISOString(),
@@ -71,28 +68,19 @@ module.exports = async (req, res) => {
     currentData.responses.push(newResponse);
     currentData.totalResponses = currentData.responses.length;
 
-    // Update file on GitHub
-    const content = Buffer.from(JSON.stringify(currentData, null, 2)).toString('base64');
-    
-    const updateUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-    const updateResponse = await fetch(updateUrl, {
+    // บันทึกกลับไปที่ JSONBin
+    const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
       method: 'PUT',
       headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY
       },
-      body: JSON.stringify({
-        message: `Add personality test response #${newResponse.id} - ${result.type}`,
-        content: content,
-        sha: fileSha,
-        branch: 'main'
-      })
+      body: JSON.stringify(currentData)
     });
 
     if (!updateResponse.ok) {
       const errorData = await updateResponse.json();
-      throw new Error('Failed to update file: ' + JSON.stringify(errorData));
+      throw new Error('ไม่สามารถบันทึกข้อมูลได้: ' + JSON.stringify(errorData));
     }
 
     return res.status(200).json({ 

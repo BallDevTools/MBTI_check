@@ -14,17 +14,14 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const GITHUB_TOKEN = "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";
-    const REPO_OWNER = process.env.REPO_OWNER || 'BallDevTools'; // เปลี่ยนตรงนี้
-    const REPO_NAME = process.env.REPO_NAME || 'MBTI_check'; // เปลี่ยนตรงนี้
-    const FILE_PATH = 'data/personality-responses.json';
+    const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || 'YOUR_JSONBIN_API_KEY'; // เปลี่ยนตรงนี้
+    const BIN_ID = process.env.JSONBIN_BIN_ID || 'YOUR_BIN_ID'; // เปลี่ยนตรงนี้
 
-    const getFileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-    
-    const response = await fetch(getFileUrl, {
+    // ดึงข้อมูลจาก JSONBin
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      method: 'GET',
       headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json'
+        'X-Master-Key': JSONBIN_API_KEY
       }
     });
 
@@ -32,24 +29,23 @@ module.exports = async (req, res) => {
       return res.status(404).send('ไม่พบข้อมูล');
     }
 
-    const fileData = await response.json();
-    const content = Buffer.from(fileData.content, 'base64').toString('utf8');
-    const data = JSON.parse(content);
+    const binData = await response.json();
+    const data = binData.record || { responses: [], totalResponses: 0 };
     
     if (!data.responses || data.responses.length === 0) {
       return res.status(404).send('ไม่พบข้อมูล');
     }
 
-    // Create CSV header
+    // สร้าง CSV header
     let csv = 'ID,Timestamp,PersonalityType,E,I,S,N,T,F,J,P';
     
-    // Add all question columns
+    // เพิ่มคอลัมน์คำถาม
     for (let i = 1; i <= 20; i++) {
       csv += `,Q${i}`;
     }
     csv += '\n';
     
-    // Add data rows
+    // เพิ่มข้อมูลแต่ละแถว
     data.responses.forEach(response => {
       const row = [
         response.id,
@@ -65,7 +61,7 @@ module.exports = async (req, res) => {
         response.scores.P || 0
       ];
 
-      // Add all answers
+      // เพิ่มคำตอบทุกข้อ
       for (let i = 1; i <= 20; i++) {
         row.push(response.answers[`q${i}`] || '');
       }
@@ -73,10 +69,10 @@ module.exports = async (req, res) => {
       csv += row.join(',') + '\n';
     });
 
-    // Add UTF-8 BOM for Thai language support in Excel
+    // เพิ่ม UTF-8 BOM สำหรับภาษาไทยใน Excel
     const csvWithBOM = '\uFEFF' + csv;
 
-    // Set headers for file download
+    // ตั้งค่า headers สำหรับดาวน์โหลดไฟล์
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="personality-test-results-${Date.now()}.csv"`);
     

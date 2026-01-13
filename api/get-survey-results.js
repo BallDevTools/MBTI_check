@@ -14,17 +14,14 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const GITHUB_TOKEN = "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";
-    const REPO_OWNER = process.env.REPO_OWNER || 'BallDevTools'; // เปลี่ยนตรงนี้
-    const REPO_NAME = process.env.REPO_NAME || 'MBTI_check'; // เปลี่ยนตรงนี้
-    const FILE_PATH = 'data/personality-responses.json';
+    const JSONBIN_API_KEY = process.env.JSONBIN_API_KEY || '$2a$10$cKfRZqFvkMmWoL6GYE0CL.VXI7JOM1i6hR45XBhH5fEjw6JjPWATC'; // เปลี่ยนตรงนี้
+    const BIN_ID = process.env.JSONBIN_BIN_ID || '6948332743b1c97be9fd22d7'; // เปลี่ยนตรงนี้
 
-    const getFileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-    
-    const response = await fetch(getFileUrl, {
+    // ดึงข้อมูลจาก JSONBin
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      method: 'GET',
       headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json'
+        'X-Master-Key': JSONBIN_API_KEY
       }
     });
 
@@ -38,9 +35,8 @@ module.exports = async (req, res) => {
       });
     }
 
-    const fileData = await response.json();
-    const content = Buffer.from(fileData.content, 'base64').toString('utf8');
-    const data = JSON.parse(content);
+    const binData = await response.json();
+    const data = binData.record || { responses: [], totalResponses: 0 };
 
     if (!data.responses || data.responses.length === 0) {
       return res.status(200).json({
@@ -52,17 +48,17 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Count personality types
+    // นับจำนวนบุคลิกภาพแต่ละประเภท
     const personalityCount = {};
     const dimensionCount = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
 
     data.responses.forEach(response => {
       const type = response.personalityType;
       
-      // Count personality types
+      // นับบุคลิกภาพ
       personalityCount[type] = (personalityCount[type] || 0) + 1;
       
-      // Count dimensions
+      // นับมิติ
       if (type) {
         for (let char of type) {
           if (dimensionCount.hasOwnProperty(char)) {
