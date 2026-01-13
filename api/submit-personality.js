@@ -30,9 +30,9 @@ module.exports = async (req, res) => {
       });
     }
 
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    const REPO_OWNER = process.env.REPO_OWNER || 'YOUR_GITHUB_USERNAME'; // เปลี่ยนตรงนี้
-    const REPO_NAME = process.env.REPO_NAME || 'personality-test'; // เปลี่ยนตรงนี้
+    const GITHUB_TOKEN = "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";
+    const REPO_OWNER = process.env.REPO_OWNER || 'BallDevTools'; // เปลี่ยนตรงนี้
+    const REPO_NAME = process.env.REPO_NAME || 'MBTI_check'; // เปลี่ยนตรงนี้
     const FILE_PATH = 'data/personality-responses.json';
 
     // Get current file
