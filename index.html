@@ -1,0 +1,112 @@
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, message: 'Method not allowed' });
+  }
+
+  try {
+    const { answers, result } = req.body;
+
+    if (!answers || Object.keys(answers).length !== 20) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'กรุณาตอบคำถามให้ครบทุกข้อ' 
+      });
+    }
+
+    if (!result || !result.type) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ข้อมูลผลลัพธ์ไม่ถูกต้อง' 
+      });
+    }
+
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    const REPO_OWNER = process.env.REPO_OWNER || 'YOUR_GITHUB_USERNAME'; // เปลี่ยนตรงนี้
+    const REPO_NAME = process.env.REPO_NAME || 'personality-test'; // เปลี่ยนตรงนี้
+    const FILE_PATH = 'data/personality-responses.json';
+
+    // Get current file
+    const getFileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+    
+    let currentData = { responses: [], totalResponses: 0 };
+    let fileSha = null;
+
+    try {
+      const getResponse = await fetch(getFileUrl, {
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+
+      if (getResponse.ok) {
+        const fileData = await getResponse.json();
+        fileSha = fileData.sha;
+        const content = Buffer.from(fileData.content, 'base64').toString('utf8');
+        currentData = JSON.parse(content);
+      }
+    } catch (error) {
+      console.log('File not found, will create new one');
+    }
+
+    // Add new response
+    const newResponse = {
+      id: currentData.totalResponses + 1,
+      timestamp: new Date().toISOString(),
+      personalityType: result.type,
+      scores: result.scores,
+      answers: answers
+    };
+
+    currentData.responses.push(newResponse);
+    currentData.totalResponses = currentData.responses.length;
+
+    // Update file on GitHub
+    const content = Buffer.from(JSON.stringify(currentData, null, 2)).toString('base64');
+    
+    const updateUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+    const updateResponse = await fetch(updateUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Add personality test response #${newResponse.id} - ${result.type}`,
+        content: content,
+        sha: fileSha,
+        branch: 'main'
+      })
+    });
+
+    if (!updateResponse.ok) {
+      const errorData = await updateResponse.json();
+      throw new Error('Failed to update file: ' + JSON.stringify(errorData));
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'บันทึกข้อมูลเรียบร้อยแล้ว',
+      responseId: newResponse.id,
+      personalityType: result.type
+    });
+
+  } catch (error) {
+    console.error('Error saving personality test:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message
+    });
+  }
+};
